@@ -2,19 +2,21 @@ module C
 
 const LUA = :liblua
 
-const CTYPES = Dict(
+const CTYPES = Dict{Union{Symbol, Expr}, DataType}(
     :Int => Cint,
     :String => Cstring,
+    :(Ptr{Int}) => Ptr{Cint},
 )
 
 const INTYPES = Dict(
     :Csize_t => UInt,
+    :(Ptr{Int}) => Ptr{Int},
 )
 
 ctype(s::Symbol) = haskey(CTYPES, s) ? CTYPES[s] : eval(s)
-ctype(ex::Expr) = ctype(ex.args[3])
+ctype(ex::Expr) = haskey(CTYPES, ex) ? CTYPES[ex] : ctype(ex.args[3])
 intype(s::Symbol) = haskey(INTYPES, s) ? INTYPES[s] : eval(s)
-intype(ex::Expr) = intype(ex.args[2])
+intype(ex::Expr) = haskey(INTYPES, ex) ? INTYPES[ex] : intype(ex.args[2])
 
 # Input:
 # @luac lua_absindex(L::LuaState, idx::Int)::Cint
