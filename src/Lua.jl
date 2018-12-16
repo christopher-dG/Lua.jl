@@ -1,5 +1,7 @@
 module Lua
 
-greet() = print("Hello World!")
+include("C.jl")
 
-end # module
+using .C
+
+end
