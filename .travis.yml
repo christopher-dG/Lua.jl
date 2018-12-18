@@ -1,13 +1,11 @@
+dist: xenial
 language: julia
-julia:
-  - 1.0
-  - nightly
+julia: [1.0, nightly]
 matrix:
-  allow_failures:
-    - julia: nightly
+  allow_failures: [{julia: nightly}]
   fast_finish: true
-notifications:
-  email: false
+notifications: {email: false}
+addons: {apt: {packages: [lua5.3-dev]}}
 jobs:
   include:
     - stage: Documentation
@@ -16,5 +14,6 @@ jobs:
           using Pkg;
           Pkg.develop(PackageSpec(path=pwd()));
           Pkg.instantiate();
+          Pkg.build("Lua");
           include("docs/make.jl");'
       after_success: skip

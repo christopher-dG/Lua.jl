@@ -1,4 +1,4 @@
-mutable struct _LuaState end
+struct _LuaState end
 const LuaState = Ptr{_LuaState}
 
 struct LuaAlloc
@@ -17,9 +17,6 @@ const LuaReader = Ptr{Cvoid}
 const LuaUnsigned = Culonglong
 const LuaWriter = Ptr{Cvoid}
 
-mutable struct _LuaLBuffer end
-const LuaLBuffer = Ptr{_LuaLBuffer}
-
 nullptr(::Type{T}) where T = Ptr{T}(0)
 
 macro luacfunction(f::Symbol)
@@ -33,4 +30,20 @@ macro luareader(f::Symbol)
 end
 macro luawriter(f::Symbol)
     @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
+end
+
+mutable struct _LuaLBuffer end
+const LuaLBuffer = Ptr{_LuaLBuffer}
+
+struct LuaLReg
+    name::Cstring
+    func::LuaCFunction
+end
+
+struct _CFile end
+const CFile = Ptr{_CFile}
+
+struct LuaLStream
+    f::CFile
+    closef::LuaCFunction
 end

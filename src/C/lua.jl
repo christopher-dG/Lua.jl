@@ -2,18 +2,6 @@
 
 # Manual overrides: These are necessary because some C functions are defined with macros.
 
-# Constants copied from the headers.
-const LUA_EXTRASPACE = sizeof(Ptr{Cvoid})
-const LUA_TNONE = -1
-const LUA_TNIL = 0
-const LUA_TBOOLEAN = 1
-const LUA_TLIGHTUSERDATA = 2
-const LUA_TTABLE = 5
-const LUA_TFUNCTION = 6
-const LUAI_MAXSTACK = 1000000
-const LUA_REGISTRYINDEX = -LUAI_MAXSTACK - 1000
-const LUA_RIDX_GLOBALS = 2
-
 export lua_call, lua_insert, lua_isboolean, lua_isfunction, lua_islightuserdata, lua_isnil,
     lua_isnone, lua_isnoneornil, lua_istable, lua_newtable, lua_numbertointeger, lua_pcall,
     lua_pop, lua_pushcfunction, lua_pushglobaltable, lua_pushliteral, lua_register,

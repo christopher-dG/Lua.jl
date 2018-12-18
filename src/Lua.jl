@@ -1,5 +1,8 @@
 module Lua
 
+const depsfile = joinpath(dirname(@__DIR__), "deps", "deps.jl")
+isfile(depsfile) ? include(depsfile) : error("""Run Pkg.build("Lua")""")
+
 include("C.jl")
 
 using .C

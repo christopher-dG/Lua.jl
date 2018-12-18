@@ -1,9 +1,19 @@
 module C
 
+using ..Lua: liblua
 using Libdl
 
-const LIBLUA = Libdl.dlopen(:liblua)
+# Pointer to liblua.
+const LIBLUA = Ref{Ptr{Cvoid}}(0)
+
+function __init__()
+    LIBLUA[] = Libdl.dlopen(liblua)
+end
+
+# C function pointers.
 const FPTRS = Dict{Symbol, Ptr{Cvoid}}()
+
+# Make function signatures a bit more friendly.
 
 const ARGTYPES = Dict(
     :Cint => Integer,
@@ -11,7 +21,7 @@ const ARGTYPES = Dict(
     :LuaKContext => Integer,
 )
 
-argtype(s::Symbol) = haskey(ARGTYPES, s) ? ARGTYPES[s] : eval(s)
+argtype(s::Symbol) = get(() -> eval(s), ARGTYPES, s)
 argtype(ex::Expr) = eval(ex)
 
 # Generate a function which wraps a ccall.
@@ -36,7 +46,7 @@ macro luac(ex::Expr)
 
     quote
         # Load the liblua function and store a pointer to it.
-        FPTRS[$fsym] = Libdl.dlsym(LIBLUA, $fsym)
+        FPTRS[$fsym] = Libdl.dlsym(LIBLUA[], $fsym)
         # Export the function.
         export $fname
         # And finally define it.
