@@ -1,41 +1,46 @@
 module C
 
-const LUA = :liblua
+using Libdl
 
-const CTYPES = Dict{Union{Symbol, Expr}, DataType}(
-    :Int => Cint,
-    :String => Cstring,
-    :(Ptr{Int}) => Ptr{Cint},
+const LIBLUA = Libdl.dlopen(:liblua)
+const FPTRS = Dict{Symbol, Ptr{Cvoid}}()
+
+const ARGTYPES = Dict(
+    :Cint => Integer,
+    :Cstring => String,
+    :LuaKContext => Integer,
 )
 
-const INTYPES = Dict(
-    :Csize_t => UInt,
-    :(Ptr{Int}) => Ptr{Int},
-)
+argtype(s::Symbol) = haskey(ARGTYPES, s) ? ARGTYPES[s] : eval(s)
+argtype(ex::Expr) = eval(ex)
 
-ctype(s::Symbol) = haskey(CTYPES, s) ? CTYPES[s] : eval(s)
-ctype(ex::Expr) = haskey(CTYPES, ex) ? CTYPES[ex] : ctype(ex.args[3])
-intype(s::Symbol) = haskey(INTYPES, s) ? INTYPES[s] : eval(s)
-intype(ex::Expr) = haskey(INTYPES, ex) ? INTYPES[ex] : intype(ex.args[2])
-
-# Input:
-# @luac lua_absindex(L::LuaState, idx::Int)::Cint
-# Output:
-# lua_absindex(L::LuaState, idx::Int) =
-#     ccall((:lua_absindex, LUA), Cint, (LuaState, Cint), L, idx)
+# Generate a function which wraps a ccall.
 # TODO: Passing ctypes is broken.
 macro luac(ex::Expr)
+    # Function name, quoted to be resolved as a symbol.
     fsym = QuoteNode(ex.args[1].args[1])
+    # Function name, not quoted to declare the actual function.
     fname = esc(fsym.value)
+    # Function return type. No conversions.
     ret = ex.args[2]
+    # Function arguments to play with.
     args = ex.args[1].args[2:end]
+    # Names of the function arguments.
     argnames = map(a -> esc(a.args[1]), args)
-    sig = map(((n, t),) -> :($n::$t), zip(argnames, map(a -> intype(a.args[2]), args)))
-    ctypes = Tuple(map(a -> ctype(a.args[2]), args))
+    # Types of function arguments.
+    argtypes = map(a -> argtype(a.args[2]), args)
+    # Function signature.
+    sig = map(((n, t),) -> :($n::$t), zip(argnames, argtypes))
+    # Types of arguments to send to ccall.
+    ctypes = Tuple(map(a -> eval(a.args[2]), args))
 
     quote
+        # Load the liblua function and store a pointer to it.
+        FPTRS[$fsym] = Libdl.dlsym(LIBLUA, $fsym)
+        # Export the function.
         export $fname
-        $fname($(sig...)) = ccall(($fsym, LUA), $ret, $ctypes, $(argnames...))
+        # And finally define it.
+        $fname($(sig...))::$ret = ccall(FTRS[$fsym], $ret, $ctypes, $(argnames...))
     end
 end
 

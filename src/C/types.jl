@@ -8,15 +8,29 @@ struct LuaAlloc
     nsize::Csize_t
 end
 
-# TODO: Most types which use this have signature constraints,
-# but there's no way to represent that.
-const CFunction = Ptr{Cvoid}
-
-const LuaCFunction = CFunction
+const LuaCFunction = Ptr{Cvoid}
 const LuaInteger = Clonglong
-const LuaKContext = Ptr{Cint}  # TODO: Check correctness (this is intptr_t).
-const LuaKFunction = CFunction
+const LuaKContext = Cint  # This is intptr_t.
+const LuaKFunction = Ptr{Cvoid}
 const LuaNumber = Cdouble
-const LuaReader = CFunction
+const LuaReader = Ptr{Cvoid}
 const LuaUnsigned = Culonglong
-const LuaWriter = CFunction
+const LuaWriter = Ptr{Cvoid}
+
+mutable struct _LuaLBuffer end
+const LuaLBuffer = Ptr{_LuaLBuffer}
+
+nullptr(::Type{T}) where T = Ptr{T}(0)
+
+macro luacfunction(f::Symbol)
+    @cfunction $f Cint (LuaState,)
+end
+macro luakcfunction(f::Symbol)
+    @cfunction $f Cint (LuaState, Cint, LuaKContext)
+end
+macro luareader(f::Symbol)
+    @cfunction $f Cstring (LuaState, Ptr{Cvoid}, Ptr{Csize_t})
+end
+macro luawriter(f::Symbol)
+    @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
+end
