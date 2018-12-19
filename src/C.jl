@@ -17,12 +17,14 @@ end
 const FPTRS = Dict{Symbol, Ptr{Cvoid}}()
 
 # Make function signatures a bit more friendly.
+const Str = Union{Cstring, String}
 argtype(s::Symbol) = get(() -> eval(s), ARGTYPES, s)
 argtype(ex::Expr) = eval(ex)
 const ARGTYPES = Dict(
     :Cint => Integer,
-    :Cstring => String,
+    :Csize_t => Integer,
     :LuaKContext => Integer,
+    :Cstring => Str,
 )
 
 # Generate a function which wraps a ccall.
