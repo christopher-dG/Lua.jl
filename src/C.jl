@@ -3,6 +3,7 @@ module C
 const depsfile = joinpath(dirname(@__DIR__), "deps", "deps.jl")
 isfile(depsfile) ? include(depsfile) : error("""Run Pkg.build("Lua")""")
 
+using Lua: L, LuaState
 using Libdl
 
 # Pointer to liblua.
@@ -45,6 +46,8 @@ macro luac(ex::Expr)
     sig = map(((n, t),) -> :($n::$t), zip(argnames, argtypes))
     # Types of arguments to send to ccall.
     ctypes = map(a -> eval(a.args[2]), args)
+    # For functions which take a LuaState, define a second method with a default argument.
+    hasstate = !isempty(ctypes) && ctypes[1] === LuaState
 
     quote
         # The __init__() function has yet to run, so LIBLUA[] is still a null pointer.
@@ -53,6 +56,9 @@ macro luac(ex::Expr)
         function $fname($(sig...))::$ret
             f = get!(() -> Libdl.dlsym(LIBLUA[], $fsym), FPTRS, $fsym)
             return ccall(f, $ret, ($(ctypes...),), $(argnames...))
+        end
+        if $hasstate
+            $fname($(sig[2:end]...)) = $fname(L[], $(argnames[2:end]...))
         end
     end
 end

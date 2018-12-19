@@ -1,11 +1,14 @@
 dist: xenial
 language: julia
+os: [linux, osx]
 julia: [1.0, nightly]
 matrix:
   allow_failures: [{julia: nightly}]
   fast_finish: true
 notifications: {email: false}
-addons: {apt: {packages: [lua5.3-dev]}}
+addons:
+  apt: {packages: [lua5.3-dev]}
+  homebrew: {packages: [lua]}
 jobs:
   include:
     - stage: Documentation
