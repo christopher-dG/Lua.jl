@@ -20,16 +20,16 @@ const LuaWriter = Ptr{Cvoid}
 nullptr(::Type{T}) where T = Ptr{T}(0)
 
 macro luacfunction(f::Symbol)
-    @cfunction $f Cint (LuaState,)
+    @eval @cfunction f Cint (LuaState,)
 end
 macro luakcfunction(f::Symbol)
-    @cfunction $f Cint (LuaState, Cint, LuaKContext)
+    @eval @cfunction $f Cint (LuaState, Cint, LuaKContext)
 end
 macro luareader(f::Symbol)
-    @cfunction $f Cstring (LuaState, Ptr{Cvoid}, Ptr{Csize_t})
+    @eval @cfunction eval(f) Cstring (LuaState, Ptr{Cvoid}, Ptr{Csize_t})
 end
 macro luawriter(f::Symbol)
-    @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
+    @eval @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
 end
 
 mutable struct _LuaLBuffer end
