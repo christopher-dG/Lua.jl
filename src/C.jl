@@ -66,5 +66,6 @@ end
 include(joinpath("C", "types.jl"))
 include(joinpath("C", "lua.jl"))
 include(joinpath("C", "aux.jl"))
+include(joinpath("C", "debug.jl"))
 
 end

@@ -44,3 +44,25 @@ struct LuaLStream
     f::CFile
     closef::LuaCFunction
 end
+
+struct _LuaDebug
+    event::Cint
+    name::Cstring
+    namewhat::Cstring
+    source::Cstring
+    currentline::Cint
+    linedefined::Cint
+    lastlinedefined::Cint
+    nups::Cuchar
+    nparams::Cuchar
+    isvararg::Cchar
+    istailcall::Cchar
+    short_src::NTuple{LUA_IDSIZE, Cchar}
+end
+const LuaDebug = Ptr{_LuaDebug}
+
+const LuaHook = Ptr{Cvoid}
+
+macro luahook(f::Function)
+    @eval @cfunction $f Cvoid (LuaState, LuaDebug)
+end
