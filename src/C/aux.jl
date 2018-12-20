@@ -14,9 +14,9 @@ luaL_checkstring(L::LuaState, arg::Integer) = luaL_checklstring(L, n, nullptr(Cs
 luaL_checkversion(L::LuaState) =
     ccall(get!(() -> Libdl.dlsym(LIBLUA, :luaL_checkversion_), FPTRS, :luaL_checkversion_),
           Cvoid, (LuaState, LuaNumber, Csize_t), L, LUA_VERSION_NUM, LUAL_NUMSIZES)
-luaL_dofile(L::LuaState, filename::Str)::Integer =
+luaL_dofile(L::LuaState, filename::Str)::Cint =
     luaL_loadfile(L, filename) == 1 || lua_pcall(L, 0, LUA_MULTRET, 0)
-luaL_dostring(L::LuaState, str::Str)::Integer =
+luaL_dostring(L::LuaState, str::Str)::Cint =
     luaL_loadstring(L, str) == 1 || lua_pcall(L, 0, LUA_MULTRET, 0)
 luaL_getmetatable(L::LuaState, tname::Str) = lua_getfield(L, LUA_REGISTRYINDEX, tname)
 luaL_loadbuffer(L::LuaState, buff::Str, sz::Integer, name::Str) =

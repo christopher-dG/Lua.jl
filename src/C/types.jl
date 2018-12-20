@@ -1,6 +1,3 @@
-struct _LuaState end
-const LuaState = Ptr{_LuaState}
-
 struct LuaAlloc
     ud::Ptr{Cvoid}
     ptr::Ptr{Cvoid}

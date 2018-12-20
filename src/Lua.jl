@@ -1,21 +1,35 @@
 module Lua
 
-export @lua_str, @luatype
+export setluastate!, @lua_str, @luastruct
 
-include("C.jl")
-
-using .C
+struct _LuaState end
+const LuaState = Ptr{_LuaState}
 
 # The default Lua thread.
-const L = Ref{C.LuaState}(0)
+const L = Ref{LuaState}(0)
+
+include("C.jl")
+using .C
 
 function __init__()
     L[] = luaL_newstate()
-    luaL_openlibs(L[])
-    atexit(() -> lua_close(L[]))
+    luaL_openlibs()
+    atexit(lua_close)
 end
 
-const LUA_VAR = r"\$([^\d][\w]+)"
+"""
+    setluastate!(new_L::LuaState) -> LuaState
+
+Set the default Lua thread. The previous default is returned.
+"""
+function setluastate!(new_L::LuaState)
+    old_L = L[]
+    L[] = new_L
+    return old_L
+end
+
+# Alphanumeric + underscores, with no leading digit.
+const LUA_VAR = r"\$([a-zA-Z_][\w]+)"
 
 """
     @lua_str -> Any
@@ -23,7 +37,7 @@ const LUA_VAR = r"\$([^\d][\w]+)"
 Evaluate some Lua code. Variables interpolated with `\$` are made into local Lua variables.
 
 ## Examples
-```jldoctest
+```jldoctest; setup=:(using Lua)
 julia> lua"print(1)";
 1
 
@@ -46,29 +60,48 @@ macro lua_str(s)
 end
 
 """
-    @luatype T
+    @luastruct T
 
-Enable converting variables of type `T` into Lua variables.
+Enable converting structs of type `T` into Lua variables.
+
+## Example
+```jldoctest; setup=:(using Lua)
+julia> struct Foo a; b; c; end
+
+julia> @luastruct Foo
+
+julia> println(Lua.luaval(Foo(nothing, "bar", 1)))
+{a=nil,b="bar",c=1}
+```
 """
-macro luatype(T::Symbol)
+macro luastruct(T::Symbol)
     quote
+        if !isstructtype($(esc(T)))
+            throw(ArgumentError("@luatype can only be used on structs"))
+        end
+
         function Lua.luaval(x::$(esc(T)))
-            vals = map(n -> string(n, "=", luavar(getfield(x, n))), propertynames(x))
+            vals = map(n -> string(n, "=", luaval(getfield(x, n))), propertynames(x))
             return string("{", join(vals, ','), "}")
         end
     end
 end
 
-luakey(x) = luavar(x)
+luakey(x) = luaval(x)
+luakey(x::Symbol) = string(x)
 luakey(x::AbstractString) = x
 
+# Returns an inline value, and a NamedTuple of the non-inlined keys/values.
 luaval(x) = error("Can't convert $(typeof(x)) to Lua value")
 luaval(x::AbstractString) = repr(x)
 luaval(::Nothing) = "nil"
-luaval(x::Union{Bool, Number}) = string(x)
-luaval(x::AbstractArray) = string("{", join(map(luavar, x), ','), "}")
-function luaval(x::AbstractDict)
-    vals = [string(luakey(p.first), "=", luaval(p.second)) for p in x]
+luaval(x::Union{Bool, Real}) = string(x)
+luaval(x::Union{AbstractArray, Tuple}) = string("{", join(map(luaval, x), ','), "}")
+function luaval(x::Union{AbstractDict, NamedTuple})
+    if any(p -> p.first isa Number, pairs(x))
+        error("Can't convert $(typeof(x)) with numeric keys to Lua value")
+    end
+    vals = [string(luakey(p.first), "=", luaval(p.second)) for p in pairs(x)]
     return string("{", join(vals, ','), "}")
 end
 
