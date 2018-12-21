@@ -29,7 +29,8 @@ function setluastate!(new_L::LuaState)
 end
 
 # Alphanumeric + underscores, with no leading digit.
-const LUA_VAR = r"\$([a-zA-Z_]\w*)"
+const LUA_VAR = r"[a-zA-Z_]\w*"
+const LUA_VAR_INTERPOLATED = r"\$([a-zA-Z_]\w*)"
 
 """
     @lua_str -> Any
@@ -76,9 +77,8 @@ julia> println(Lua.luaval(Foo(nothing, "bar", 1)))
 """
 macro luastruct(T::Symbol)
     quote
-        if !isstructtype($(esc(T)))
-            throw(ArgumentError("@luatype can only be used on structs"))
-        end
+        isstructtype($(esc(T))) || error("@luatype can only be used on structs")
+        foreach(n -> isvarname(n) || error("$n is an invalid name"), fieldnames($(esc(T))))
 
         function Lua.luaval(x::$(esc(T)))
             vals = map(n -> string(n, "=", luaval(getfield(x, n))), propertynames(x))
@@ -86,6 +86,12 @@ macro luastruct(T::Symbol)
         end
     end
 end
+
+const LUA_KEYWORDS = Set(["and", "break" ,"do", "else", "elseif", "end", "false", "for",
+                          "function", "if", "in", "local", "nil", "not", "or", "repeat",
+                          "return", "then", "true", "until", "while"])
+isvarname(x::String) = !in(x, LUA_KEYWORDS) && match(LUA_VAR, string(x)) !== nothing
+isvarname(x) = isvarname(string(x))
 
 luakey(x) = luaval(x)
 luakey(x::Symbol) = string(x)
@@ -103,6 +109,25 @@ function luaval(x::Union{AbstractDict, NamedTuple})
     end
     vals = [string(luakey(p.first), "=", luaval(p.second)) for p in pairs(x)]
     return string("{", join(vals, ','), "}")
+end
+
+assign(name, value) = string("local ", name, "=", luaval(value))
+function assign(name, value::AbstractDict)
+    nums = Set(filter(k -> k isa Real, keys(value)))
+    isempty(nums) && return invoke(luassign, Tuple{Any, Any}, name, value)
+
+    inline = IOBuffer()
+    later = IOBuffer()
+
+    print(inline, "local $name={")
+    for (k, v) in pairs(value)
+        lk = luakey(k)
+        lv = luaval(v)
+        k in nums ? println(later, "$name[$lk]=$lv") : print(inline, lk, "=", lv, ",")
+    end
+    println(inline, "}")
+
+    return String(take!(inline)) * String(take!(later))
 end
 
 end
