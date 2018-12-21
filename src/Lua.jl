@@ -29,7 +29,7 @@ function setluastate!(new_L::LuaState)
 end
 
 # Alphanumeric + underscores, with no leading digit.
-const LUA_VAR = r"\$([a-zA-Z_][\w]+)"
+const LUA_VAR = r"\$([a-zA-Z_]\w*)"
 
 """
     @lua_str -> Any

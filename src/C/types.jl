@@ -1,3 +1,5 @@
+nullptr(::Type{T}) where T = Ptr{T}(0)
+
 struct LuaAlloc
     ud::Ptr{Cvoid}
     ptr::Ptr{Cvoid}
@@ -5,29 +7,16 @@ struct LuaAlloc
     nsize::Csize_t
 end
 
-const LuaCFunction = Ptr{Cvoid}
+# TODO: Generate some of these from the Lua headers.
+
+const LuaCFunction = Union{Ptr{Cvoid}, Base.CFunction}
 const LuaInteger = Clonglong
 const LuaKContext = Cint  # This is intptr_t.
-const LuaKFunction = Ptr{Cvoid}
+const LuaKFunction = Union{Ptr{Cvoid}, Base.CFunction}
 const LuaNumber = Cdouble
-const LuaReader = Ptr{Cvoid}
+const LuaReader = Union{Ptr{Cvoid}, Base.CFunction}
 const LuaUnsigned = Culonglong
-const LuaWriter = Ptr{Cvoid}
-
-nullptr(::Type{T}) where T = Ptr{T}(0)
-
-macro luacfunction(f::Symbol)
-    @eval @cfunction f Cint (LuaState,)
-end
-macro luakcfunction(f::Symbol)
-    @eval @cfunction $f Cint (LuaState, Cint, LuaKContext)
-end
-macro luareader(f::Symbol)
-    @eval @cfunction eval(f) Cstring (LuaState, Ptr{Cvoid}, Ptr{Csize_t})
-end
-macro luawriter(f::Symbol)
-    @eval @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
-end
+const LuaWriter = Union{Ptr{Cvoid}, Base.CFunction}
 
 mutable struct _LuaLBuffer end
 const LuaLBuffer = Ptr{_LuaLBuffer}
@@ -45,7 +34,7 @@ struct LuaLStream
     closef::LuaCFunction
 end
 
-struct _LuaDebug
+mutable struct _LuaDebug
     event::Cint
     name::Cstring
     namewhat::Cstring
@@ -58,11 +47,15 @@ struct _LuaDebug
     isvararg::Cchar
     istailcall::Cchar
     short_src::NTuple{LUA_IDSIZE, Cchar}
+    _LuaDebug() = new()
 end
-const LuaDebug = Ptr{_LuaDebug}
+const LuaDebug = Ref{_LuaDebug}
+LuaDebug() = Ref(_LuaDebug())
 
-const LuaHook = Ptr{Cvoid}
+const LuaHook = Union{Ptr{Cvoid}, Base.CFunction}
 
-macro luahook(f::Function)
-    @eval @cfunction $f Cvoid (LuaState, LuaDebug)
-end
+luacfunction(f::Function) = @cfunction $f Cint (LuaState,)
+luakfunction(f::Function) = @cfunction $f Cint (LuaState, Cint, LuaKContext)
+luareader(f::Function) = @cfunction $f Cstring (LuaState, Ptr{Cvoid}, Ptr{Csize_t})
+luawriter(f::Function) = @cfunction $f Cint (LuaState, Ptr{Cvoid}, Csize_t, Ptr{Cvoid})
+luahook(f::Function) = @cfunction $f Cvoid (LuaState, LuaDebug)

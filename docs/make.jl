@@ -10,6 +10,7 @@ makedocs(;
     sitename="Lua.jl",
     authors="Chris de Graaf",
     assets=[],
+    strict=true,
 )
 
 deploydocs(;

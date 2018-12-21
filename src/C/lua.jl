@@ -9,34 +9,57 @@ export lua_call, lua_insert, lua_isboolean, lua_isfunction, lua_islightuserdata,
 
 lua_call(L::LuaState, nargs::Integer, nresults::Integer) =
     lua_callk(L, nargs, nresults, 0, nullptr(Cvoid))
+lua_call(nargs::Integer, nresults::Integer) = lua_call(L[], nargs, nresults)
 lua_getextraspace(L::LuaState) = Ptr{Cvoid}(UInt(L) - LUA_EXTRASPACE)
+lua_getextraspace() = lua_getextraspace(L[])
 lua_insert(L::LuaState, idx::Integer) = lua_rotate(L, idx, 1)
-lua_isboolean(L::LuaState, index::Integer)::Cint = lua_type(L, index) == LUA_TBOOLEAN
-lua_isfunction(L::LuaState, index::Integer)::Cint = lua_type(L, index) == LUA_TFUNCTION
-lua_islightuserdata(L::LuaState, index::Integer)::Cint =
+lua_insert(idx::Integer) = lua_insert(L[], idx)
+lua_isboolean(L::LuaState, index::Integer)::Int = lua_type(L, index) == LUA_TBOOLEAN
+lua_isboolean(index::Integer) = lua_isboolean(L[], index)
+lua_isfunction(L::LuaState, index::Integer)::Int = lua_type(L, index) == LUA_TFUNCTION
+lua_isfunction(index::Integer) = lua_isfunction(L[], index)
+lua_islightuserdata(L::LuaState, index::Integer)::Int =
     lua_type(L, index) == LUA_TLIGHTUSERDATA
-lua_isnil(L::LuaState, index::Integer)::Cint = lua_type(L, index) == LUA_TNIL
-lua_isnone(L::LuaState, index::Integer)::Cint = lua_type(L, index) == LUA_TNONE
-lua_isnoneornil(L::LuaState, index::Integer)::Cint = lua_type(L, index) <= LUA_TNIL
-lua_istable(L::LuaState, index::Integer)::Cint = lua_type(L, index) == LUA_TTABLE
+lua_islightuserdata(index::Integer) = lua_islightuserdata(L[], index)
+lua_isnil(L::LuaState, index::Integer)::Int = lua_type(L, index) == LUA_TNIL
+lua_isnil(index::Integer) = lua_isnil(L[], index)
+lua_isnone(L::LuaState, index::Integer)::Int = lua_type(L, index) == LUA_TNONE
+lua_isnone(index::Integer) = lua_isnone(L[], index)
+lua_isnoneornil(L::LuaState, index::Integer)::Int = lua_type(L, index) <= LUA_TNIL
+lua_isnoneornil(index::Integer) = lua_isnoneornil(L[], index)
+lua_istable(L::LuaState, index::Integer)::Int = lua_type(L, index) == LUA_TTABLE
+lua_istable(index::Integer) = lua_istable(L[], index)
 lua_newtable(L::LuaState) = lua_createtable(L, 0, 0)
-lua_numbertointeger(n::LuaNumber, p::Ptr{LuaInteger})::Cint =
+lua_newtable() = lua_newtable(L[])
+lua_numbertointeger(n::LuaNumber, p::Ptr{LuaInteger}) =
     typemin(Cint) <= n <= typemax(Cint) ? (unsafe_store!(p, round(LuaInteger, n)); 1) : 0
-lua_pcall(L::LuaState, nargs::Integer, nresults::Integer, msgh::Integer) =
+pcall(L::LuaState, nargs::Integer, nresults::Integer, msgh::Integer) =
     lua_pcallk(L, nargs, nresults, msgh, 0, nullptr(Cvoid))
+lua_pcall(nargs::Integer, nresults::Integer, msgh::Integer) =
+    lua_pcall(L[], nargs, nresults, msgh)
 lua_pop(L::LuaState, n::Integer) = lua_settop(L, -n - 1)
-lua_pushcfunction(L::LuaState, f::Function) = lua_pushcclosure(L, f, 0)
+lua_pop(n::Integer) = lua_pop(L[], n)
+lua_pushcfunction(L::LuaState, f::LuaCFunction) = lua_pushcclosure(L, f, 0)
+lua_pushcfunction(f::LuaCFunction) = lua_pushcfunction(L[], f)
 lua_pushglobaltable(L::LuaState) =
     (lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_GLOBALS); Cvoid())
+lua_pushglobaltable() = lua_pushglobaltable(L[])
 lua_pushliteral(L::LuaState, s::String) = lua_pushstring(L, s)
-lua_register(L::LuaState, name::String, f::Function) =
+lua_pushliteral(s::String) = lua_pushliteral(L[], s)
+lua_register(L::LuaState, name::String, f::LuaCFunction) =
     (lua_pushcfunction(L, f); lua_setglobal(L, name))
+lua_register(name::String, f::LuaCFunction) = lua_register(L[], name, f)
 lua_remove(L::LuaState, index::Integer) = (lua_rotate(L, idx, -1); lua_pop(L, 1))
+lua_remove(index::Integer) = lua_remove(L[], index)
 lua_tointeger(L::LuaState, index::Integer) = lua_tointegerx(L, index, nullptr(Cint))
+lua_tointeger(index::Integer) = lua_tointeger(L[], index)
 lua_tonumber(L::LuaState, index::Integer) = lua_numberx(L, index, nullptr(Cint))
+lua_tonumber(index::Integer) = lua_tonumber(L[], index)
 lua_tostring(L::LuaState, index::Integer) = lua_tolstring(L, index, nullptr(Csize_t))
+lua_tostring(index::Integer) = lua_tostring(L[], index)
 lua_upvalueindex(i::Integer) = LUA_REGISTRYINDEX - i
 lua_yield(L::LuaState, nresults::Integer) = lua_yieldk(L, nresults, 0, nullptr(Cvoid))
+lua_yield(nresults::Integer) = lua_yield(L[], nresults)
 
 # Regular generated ccall wrappers.
 

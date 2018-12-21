@@ -14,7 +14,6 @@ if Sys.isapple()
     end
 end
 map!(d -> "-I$d", includes, includes)
-println(includes)
 
 # Compile and run a C program.
 function runc(program::String)

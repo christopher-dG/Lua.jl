@@ -17,15 +17,20 @@ end
 # C function pointers.
 const FPTRS = Dict{Symbol, Ptr{Cvoid}}()
 
-# Make function signatures a bit more friendly.
+# Make function signatures and return types a bit more friendly.
 const Str = Union{Cstring, String}
 argtype(s::Symbol) = get(() -> eval(s), ARGTYPES, s)
 argtype(ex::Expr) = eval(ex)
+rettype(s::Symbol) = get(() -> eval(s), RETTYPES, s)
+rettype(ex::Expr) = eval(ex)
 const ARGTYPES = Dict(
     :Cint => Integer,
     :Csize_t => Integer,
     :LuaKContext => Integer,
     :Cstring => Str,
+)
+RETTYPES = Dict(
+    :Cint => Int,
 )
 
 # Generate a function which wraps a ccall.
@@ -34,7 +39,7 @@ macro luac(ex::Expr)
     fsym = QuoteNode(ex.args[1].args[1])
     # Function name, not quoted to declare the actual function.
     fname = esc(fsym.value)
-    # Function return type. No conversions.
+    # Function return type.
     ret = ex.args[2]
     # Function arguments to play with.
     args = ex.args[1].args[2:end]
@@ -53,7 +58,7 @@ macro luac(ex::Expr)
         # The __init__() function has yet to run, so LIBLUA[] is still a null pointer.
         # Therefore, we load the function when it's invoked for the first time.
         export $fname
-        function $fname($(sig...))::$ret
+        function $fname($(sig...))::$(rettype(ret))
             f = get!(() -> Libdl.dlsym(LIBLUA[], $fsym), FPTRS, $fsym)
             return ccall(f, $ret, ($(ctypes...),), $(argnames...))
         end
